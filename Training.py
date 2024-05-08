@@ -12,11 +12,11 @@ health_d = pd.read_csv("health_d.csv",  encoding="latin1")
 
 
 # Concatenate all data frames
-allData = pd.concat([business_d, food_d, health_d], ignore_index=True)
+totaldata = pd.concat([business_d, food_d, health_d], ignore_index=True)
 
 
-# Preprocessing function
-def preprocess(text):
+# preprocess_funing function
+def preprocess_fun(text):
     if isinstance(text, str):
         # Tokenization
         tokens = re.findall(r"\b\w+\b", text.lower())
@@ -96,12 +96,12 @@ def plot_confusion_matrix(true_labels, predicted_labels, classes):
     plt.show()
 
 
-# Preprocess text data
-allData["text"] = allData["text"].apply(preprocess)
+# preprocess_fun text data
+totaldata["text"] = totaldata["text"].apply(preprocess_fun)
 
 # Prepare training data
-trainTexts = allData["text"].tolist()
-trainLabels = allData["label"].tolist()
+trainTexts = totaldata["text"].tolist()
+trainLabels = totaldata["label"].tolist()
 trainGraphs = [makeGraph(text) for text in trainTexts]
 
 # Train the model
