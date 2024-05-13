@@ -32,8 +32,17 @@ graph_classifier.fit(train_graphs, train_labels)
 # Prepare test data
 test_text = [
     "By following the tips and tricks for beginners you can plan",
+    "By following the tips and tricks for beginners you can plan",
+    "By following the tips and tricks for beginners you can plan",
+    
     "Citigroup posted lower profit as it spent more on severance payments",
+        "Citigroup posted lower profit as it spent more on severance payments",
+            "Citigroup posted lower profit as it spent more on severance payments"
+    
     "research article that examined 30 years",
+    "research article that examined 30 years",
+    "research article that examined 30 years",
+    
 ]
 test_graphs = [make_graph(text) for text in test_text]
 

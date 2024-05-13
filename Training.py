@@ -6,156 +6,127 @@ import seaborn as sns
 from sklearn.metrics import accuracy_score, f1_score, jaccard_score, confusion_matrix
 
 # Read data from CSV files
-business_d = pd.read_csv("business_d.csv",  encoding="latin1")
-food_d = pd.read_csv("food_d.csv",  encoding="latin1")
-health_d = pd.read_csv("health_d.csv",  encoding="latin1")
+business_df = pd.read_csv("business_d.csv", delimiter=",")
+food_df = pd.read_csv("food_d.csv", delimiter=",")
+health_df = pd.read_csv("health_d.csv", delimiter=",")
 
-
-# Concatenate all data frames
-totaldata = pd.concat([business_d, food_d, health_d], ignore_index=True)
-
-
-# preprocess_funing function
-def preprocess_fun(text):
+# Concatenate all dataframes
+combine_data = pd.concat([business_df,health_df ,food_df], ignore_index=True)
+# print(combine_data)
+# Preprocessing function
+def pre_process(text):
     if isinstance(text, str):
-        # Tokenization
-        tokens = re.findall(r"\b\w+\b", text.lower())
-        # Stop-word removal and stemming can be added here if needed
+        tokens = re.findall(r'\b\w+\b', text.lower())
         return " ".join(tokens)
     else:
         return "doctor"
 
+# Preprocess text data
+combine_data['text'] = combine_data['text'].apply(pre_process)
 
 # Make a Directed Graph according to the paper
-def makeGraph(string):
-    # Split the string into words
+def make_graph(string):
     chunks = string.split()
-    # Create a directed graph
     G = nx.DiGraph()
-    # Add nodes for each unique word
     for chunk in set(chunks):
         G.add_node(chunk)
-    # Add edges between adjacent words
     for i in range(len(chunks) - 1):
         G.add_edge(chunks[i], chunks[i + 1])
-    # nx.draw(G, with_labels=True)
-    # plt.show()
     return G
 
-
-# Calculate graph distance
-def graphDistance(graph1, graph2):
+def graph_distance(graph1, graph2):
     edges1 = set(graph1.edges())
     edges2 = set(graph2.edges())
     common = edges1.intersection(edges2)
     mcs_graph = nx.Graph(list(common))
     return -len(mcs_graph.edges())
 
-
 class GraphKNN:
-    def __init__(self, k: int):
+    def __init__(self, k:int):
         self.k = k
         self.train_graphs = []
         self.train_labels = []
-
+    
     def fit(self, train_graphs, train_labels):
         self.train_graphs = train_graphs
         self.train_labels = train_labels
-
+    
     def predict(self, graph):
         distances = []
         for train_graph in self.train_graphs:
-            distance = graphDistance(graph, train_graph)
+            distance = graph_distance(graph, train_graph)
             distances.append(distance)
-        nearest_indices = sorted(range(len(distances)), key=lambda i: distances[i])[
-            : self.k
-        ]
+        nearest_indices = sorted(range(len(distances)), key=lambda i: distances[i])[:self.k]
         nearest_labels = [self.train_labels[i] for i in nearest_indices]
         prediction = max(set(nearest_labels), key=nearest_labels.count)
-        # print("Prediction:", prediction)
         return prediction
 
-
 # Plot confusion matrix
-def plot_confusion_matrix(true_labels, predicted_labels, classes):
+def confu_matrix(true_labels, predicted_labels, classes):
     cm = confusion_matrix(true_labels, predicted_labels, labels=classes)
     plt.figure(figsize=(8, 6))
     sns.set(font_scale=1.2)
-    sns.heatmap(
-        cm,
-        annot=True,
-        fmt="d",
-        cmap="Blues",
-        cbar=False,
-        xticklabels=classes,
-        yticklabels=classes,
-    )
-    plt.xlabel("Predicted")
-    plt.ylabel("True")
-    plt.title("Confusion Matrix")
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False,
+                xticklabels=classes, yticklabels=classes)
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    plt.title('Confusion Matrix')
     plt.show()
 
-
-# preprocess_fun text data
-totaldata["text"] = totaldata["text"].apply(preprocess_fun)
-
 # Prepare training data
-trainTexts = totaldata["text"].tolist()
-trainLabels = totaldata["label"].tolist()
-trainGraphs = [makeGraph(text) for text in trainTexts]
+train_texts = combine_data['text'].tolist()
+train_labels = combine_data['label'].tolist()
+train_graphs = [make_graph(text) for text in train_texts]
 
 # Train the model
-graphClassifier = GraphKNN(k=3)
-graphClassifier.fit(trainGraphs, trainLabels)
+graph_classifier = GraphKNN(k=3)
+graph_classifier.fit(train_graphs, train_labels)
 
 # Test data
-testText = [
-    "By following the tips and tricks for beginners you can plan",
-    "Citigroup posted lower profit as it spent more on severance payments",
-    "research article that examined 30 years",
-]
-testGraphs = [makeGraph(text) for text in testText]
+test_texts = []
+for i in range(0,3):
+    test_texts.append(business_df['text'].to_list()[i])
+    # print(business_df['text'].to_list()[i])
+    test_texts.append(food_df['text'].to_list()[i])
+    # print(food_df['text'].to_list()[i])
+    test_texts.append(health_df['text'].to_list()[i])
+    # print(health_df['text'].to_list()[i])
+    print()
+
+# print(test_texts)
+
+test_graphs = [make_graph(text) for text in test_texts]
 
 # Predict
-predictions = [graphClassifier.predict(graph) for graph in testGraphs]
+predictions = [graph_classifier.predict(graph) for graph in test_graphs]
 
 # Evaluate
-testLabels = ["Food", "Business and Finance", "Health and Fitness"]
-# Calculate accuracy
-accuracy = accuracy_score(testLabels, predictions)
-# Calculate accuracy
+test_labels = ["Business and Finance", "Food","Health and Fitness"]*3
+label_order = ["Business and Finance", "Food","Health and Fitness"]
+
+accuracy = accuracy_score(test_labels, predictions)
 accuracy_percentage = accuracy * 100
 print("Accuracy: {:.2f}%".format(accuracy_percentage))
 
-# Calculate F1 Score for the second class
-f1Scores = f1_score(testLabels, predictions, average=None)
-# print("F1 Scores:", f1_scores)
-f1ScorePercentage = f1Scores[0] * 100
-print("F1 Score:", "{:.2f}%".format(f1ScorePercentage))
+f1_scores = f1_score(test_labels, predictions, average=None)
 
-# Calculate Jaccard similarity for the second class
-jaccard = jaccard_score(testLabels, predictions, average=None)
-# print("jaccard:",jaccard)
+f1_score_percentage = f1_scores[0] * 100
+print("F1 Score:", "{:.2f}%".format(f1_score_percentage))
+
+jaccard = jaccard_score(test_labels, predictions, average=None)
 jaccard_percentage = jaccard[0] * 100
 print("Jaccard Similarity:", "{:.2f}%".format(jaccard_percentage))
 
 
 # Plot confusion matrix
-confMatrix = confusion_matrix(
-    list(testLabels), list(predictions), labels=list(set(testLabels))
-)
+conf_matrix = confusion_matrix(list(test_labels), list(predictions), labels=list(set(test_labels)))
 
 plt.figure(figsize=(8, 6))
 sns.set(font_scale=1.2)
-sns.heatmap(
-    confMatrix,
-    annot=True,
-    fmt="d",
-    cmap="Blues",
-    xticklabels=set(testLabels),
-    yticklabels=set(testLabels),
-)
-plt.xlabel("Predicted labels")
-plt.ylabel("True labels")
-plt.title("Confusion Matrix")
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=label_order, yticklabels=label_order)
+
+plt.xlabel('Predicted labels')
+plt.ylabel('True labels')
+plt.title('Confusion Matrix')
 plt.show()
+
